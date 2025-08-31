@@ -3,7 +3,8 @@
 import { useEffect, useMemo, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
-import { getBooking, updateBooking, deleteBooking } from "@/lib/tempBookings";
+import { getBooking, updateBooking, deleteBooking } from "../../../../lib/tempBookings";
+
 import { getRoom } from "@/lib/mockRooms";
 
 function daysBetween(start, end) {
