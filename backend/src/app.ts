@@ -7,6 +7,7 @@ import pinoHttp from "pino-http";
 import { env } from "./config/env.js";
 import { router as api } from "./routes/index.js";
 import { errorHandler, notFound } from "./middleware/error.js";
+import customerRoutes from "./routes/customerRoutes.js";
 
 const app = express();
 
@@ -24,7 +25,7 @@ app.get("/health", (_req, res) => {
 });
 
 app.use("/api", api);
-
+app.use("/api/customers", customerRoutes);
 app.use(notFound);
 app.use(errorHandler);
 
