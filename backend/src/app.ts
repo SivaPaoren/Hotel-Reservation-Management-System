@@ -8,6 +8,7 @@ import { env } from "./config/env.js";
 import { router as api } from "./routes/index.js";
 import { errorHandler, notFound } from "./middleware/error.js";
 import customerRoutes from "./routes/customerRoutes.js";
+import roomRoutes from "./routes/roomRoutes.js";
 
 const app = express();
 
@@ -26,6 +27,7 @@ app.get("/health", (_req, res) => {
 
 app.use("/api", api);
 app.use("/api/customers", customerRoutes);
+app.use('/rooms', roomRoutes);
 app.use(notFound);
 app.use(errorHandler);
 
