@@ -3,20 +3,19 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-// relative import, no "@/..."
-import { register } from "../../lib/tempCustomers";
+import { register } from "@/data/tempCustomers";
 
 export default function RegisterPage() {
   const router = useRouter();
 
-  const [name, setName] = useState("");
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [phone, setPhone] = useState("");
-  const [nationality, setNationality] = useState("");
-  const [error, setError] = useState("");
+  const [name, setName] = useState<string>("");
+  const [email, setEmail] = useState<string>("");
+  const [password, setPassword] = useState<string>("");
+  const [phone, setPhone] = useState<string>("");
+  const [nationality, setNationality] = useState<string>("");
+  const [error, setError] = useState<string>("");
 
-  function validate() {
+  function validate(): string {
     if (!name.trim()) return "Name is required.";
     if (!email.trim()) return "Email is required.";
     if (!password) return "Password is required.";
@@ -26,6 +25,7 @@ export default function RegisterPage() {
   function onSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     setError("");
+
     const v = validate();
     if (v) {
       setError(v);
@@ -33,25 +33,21 @@ export default function RegisterPage() {
     }
 
     try {
-      // Auto-logs in on success (per our tempCustomers implementation)
+      // tempCustomers auto-logs in on successful register
       register({ name, email, password, phone, nationality });
-      router.push("/rooms"); // start booking right away
-    } catch (err: any) {
-      setError(err?.message || "Registration failed.");
+      router.push("/route/rooms"); // start booking right away
+    } catch (err: unknown) {
+      const msg = (err as Error)?.message || "Registration failed.";
+      setError(msg);
     }
   }
 
   return (
     <main className="mx-auto flex min-h-screen max-w-md flex-col justify-center px-4 py-10">
       <h1 className="text-3xl font-bold tracking-tight text-white">Create your account</h1>
-      <p className="mt-2 text-white">
-        This is a demo. Accounts exist only until you refresh the page.
-      </p>
+      <p className="mt-2 text-white">This is a demo. Accounts exist only until you refresh the page.</p>
 
-      <form
-        onSubmit={onSubmit}
-        className="mt-8 rounded-xl border bg-white p-6 shadow-sm text-black"
-      >
+      <form onSubmit={onSubmit} className="mt-8 rounded-xl border bg-white p-6 shadow-sm text-black">
         <div className="grid gap-4">
           <div>
             <label className="mb-1 block text-sm font-medium">Full name</label>
@@ -120,7 +116,7 @@ export default function RegisterPage() {
 
           <div className="text-center text-sm">
             <span className="text-gray-600">Already have an account? </span>
-            <Link href="/" className="underline">
+            <Link href="/route" className="underline">
               Log in
             </Link>
           </div>

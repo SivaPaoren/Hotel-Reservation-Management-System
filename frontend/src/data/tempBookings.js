@@ -1,17 +1,23 @@
-// Ephemeral store: cleared on full reload.
-// Now ties each booking to the current user and prevents date overlaps.
+// src/data/tempBookings.js
+// Ephemeral in-memory booking store. Clears on full reload.
+// Bookings are tied to the current logged-in customer (from tempCustomers).
 
 import { getCurrentUser } from "./tempCustomers";
 
 let bookings = [];
 let nextId = 1;
 
+// Utility: normalize to midday for overlap-safe comparisons
+function normalizeDate(d) {
+  return new Date(d).setHours(12, 0, 0, 0);
+}
+
+// Check if [aStart,aEnd) overlaps [bStart,bEnd)
 function overlaps(aStart, aEnd, bStart, bEnd) {
-  const s1 = new Date(aStart).setHours(12, 0, 0, 0);
-  const e1 = new Date(aEnd).setHours(12, 0, 0, 0);
-  const s2 = new Date(bStart).setHours(12, 0, 0, 0);
-  const e2 = new Date(bEnd).setHours(12, 0, 0, 0);
-  // [start, end) exclusive of checkout
+  const s1 = normalizeDate(aStart);
+  const e1 = normalizeDate(aEnd);
+  const s2 = normalizeDate(bStart);
+  const e2 = normalizeDate(bEnd);
   return s1 < e2 && e1 > s2;
 }
 
@@ -25,10 +31,9 @@ export function addBooking(payload) {
   const e = new Date(payload.checkOut);
   if (!(s < e)) throw new Error("checkOut must be after checkIn");
 
-  // Normalize room id to string for consistent comparisons
   const roomIdStr = String(payload.roomId);
 
-  // Prevent overlap for same room across ALL users
+  // Prevent overlaps across ALL users
   const conflict = bookings.some(
     (b) =>
       String(b.roomId) === roomIdStr &&
@@ -40,15 +45,13 @@ export function addBooking(payload) {
     id: nextId++,
     status: "confirmed",
     ...payload,
-
-    // store as string to avoid number/string mismatches
     roomId: roomIdStr,
-
     customerId: user.customer_id,
     email: user.email,
     customerName: user.name,
     createdAt: new Date().toISOString(),
   };
+
   bookings.push(record);
   return record;
 }
@@ -78,7 +81,6 @@ export function updateBooking(id, patch) {
 
   const next = { ...bookings[i], ...patch };
 
-  // Use normalized room id when checking conflicts
   const nextRoomIdStr = String(next.roomId);
   const conflict = bookings.some(
     (b) =>
@@ -95,7 +97,9 @@ export function updateBooking(id, patch) {
 export function deleteBooking(id) {
   const user = getCurrentUser();
   if (!user) return;
-  bookings = bookings.filter((b) => !(b.id === Number(id) && b.email === user.email));
+  bookings = bookings.filter(
+    (b) => !(b.id === Number(id) && b.email === user.email)
+  );
 }
 
 // For calendar UI: return blocked ranges for a room
@@ -106,17 +110,18 @@ export function getBookedRanges(roomId) {
     .map((b) => ({ start: b.checkIn, end: b.checkOut, bookingId: b.id }));
 }
 
-// Availability for a specific room across ALL users in this session.
-// exceptId (optional) lets you ignore one booking during edits.
+// Check availability for a specific room across ALL users
+// exceptId lets you ignore one booking (for edits)
 export function isRangeAvailable(roomId, checkIn, checkOut, exceptId = null) {
   const target = String(roomId);
+  const s1 = normalizeDate(checkIn);
+  const e1 = normalizeDate(checkOut);
+
   return !bookings.some((b) => {
     if (String(b.roomId) !== target) return false;
     if (exceptId != null && String(b.id) === String(exceptId)) return false;
-    const s1 = new Date(checkIn).setHours(12, 0, 0, 0);
-    const e1 = new Date(checkOut).setHours(12, 0, 0, 0);
-    const s2 = new Date(b.checkIn).setHours(12, 0, 0, 0);
-    const e2 = new Date(b.checkOut).setHours(12, 0, 0, 0);
+    const s2 = normalizeDate(b.checkIn);
+    const e2 = normalizeDate(b.checkOut);
     return s1 < e2 && e1 > s2;
   });
 }

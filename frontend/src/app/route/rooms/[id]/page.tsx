@@ -1,24 +1,38 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { getRoom } from "@/lib/mockRooms";
+import { getRoom } from "@/data/mockRooms";
 
-// Server Component (default). In Next 15, params is a Promise.
-export default async function RoomDetails({ params }) {
-  const { id } = await params; // <-- important
-  const room = getRoom(id);    // id will be a string like "2"
+// Minimal view type for safety (mockRooms is JS)
+type Room = {
+  id: string;
+  number: number | string;
+  type: string;
+  desc?: string;
+  price: number;
+  amenities: string[];
+};
+
+// Next 15: params arrives as a Promise in server components
+export default async function RoomDetails({
+  params,
+}: {
+  params: Promise<{ id: string }>;
+}) {
+  const { id } = await params;
+  const room = getRoom(id) as Room | null;
 
   if (!room) return notFound();
 
   return (
     <main className="mx-auto max-w-5xl px-4 py-10">
-      <Link href="/rooms" className="text-sm text-gray-600 hover:underline">
+      <Link href="/route/rooms" className="text-sm text-gray-600 hover:underline">
         ← Back to rooms
       </Link>
 
       <h1 className="mt-4 text-3xl font-semibold tracking-tight">
         Room #{room.number} · {room.type}
       </h1>
-      <p className="mt-2 text-gray-700">{room.desc}</p>
+      {room.desc && <p className="mt-2 text-gray-700">{room.desc}</p>}
 
       <div className="mt-6 grid gap-4 sm:grid-cols-3">
         <div className="rounded-xl border p-4">
@@ -37,7 +51,7 @@ export default async function RoomDetails({ params }) {
 
       <div className="mt-8">
         <Link
-          href={`/book?roomId=${room.id}`}
+          href={`/route/book?roomId=${encodeURIComponent(room.id)}`}
           className="inline-flex items-center rounded-xl bg-gray-900 px-4 py-3 text-sm font-medium text-white hover:bg-black"
         >
           Book this room

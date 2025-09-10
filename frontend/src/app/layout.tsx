@@ -1,5 +1,6 @@
 import "./globals.css"
-import Navbar from "../components/Navbar"
+import Navbar from "@/ui/Navbar";
+
 
 export const metadata = {
   title: "Hotel RMS",

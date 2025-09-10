@@ -1,17 +1,25 @@
 "use client";
+
 import Link from "next/link";
 import { useMemo, useState } from "react";
-import { mockRooms, getRoom } from "../lib/mockRooms";
-import { addBooking } from "../lib/tempBookings";
-import { getCurrentUser } from "../lib/tempCustomers";
+import { mockRooms, getRoom } from "@/data/mockRooms";
+import { addBooking } from "@/data/tempBookings";
+import { getCurrentUser } from "@/data/tempCustomers";
+import { todayISO as _todayISO } from "@/lib/dates";
 
-function formatISO(date) {
-  if (!date) return "";
-  const d = new Date(date);
-  return d.toISOString().split("T")[0]; // YYYY-MM-DD
-}
+type Props = {
+  initialRoomId?: string;
+};
 
-function daysBetween(start, end) {
+type Errors = Partial<{
+  roomId: string;
+  checkIn: string;
+  checkOut: string;
+  guests: string;
+  user: string;
+}>;
+
+function daysBetween(start?: string, end?: string): number {
   if (!start || !end) return 0;
   const s = new Date(start);
   const e = new Date(end);
@@ -19,26 +27,27 @@ function daysBetween(start, end) {
   return Math.max(0, Math.ceil(ms / (1000 * 60 * 60 * 24)));
 }
 
-export default function BookingForm({ initialRoomId = "" }) {
+export default function BookingForm({ initialRoomId = "" }: Props) {
   const user = getCurrentUser();
-  const [roomId, setRoomId] = useState(initialRoomId);
-  const [checkIn, setCheckIn] = useState("");
-  const [checkOut, setCheckOut] = useState("");
-  const [guests, setGuests] = useState(1);
-  const [special, setSpecial] = useState("");
-  const [submitting, setSubmitting] = useState(false);
-  const [submitted, setSubmitted] = useState(null);
-  const [errors, setErrors] = useState({});
-  const [popup, setPopup] = useState(""); // holds error message for modal
+
+  const [roomId, setRoomId] = useState<string>(initialRoomId);
+  const [checkIn, setCheckIn] = useState<string>("");
+  const [checkOut, setCheckOut] = useState<string>("");
+  const [guests, setGuests] = useState<number>(1);
+  const [special, setSpecial] = useState<string>("");
+  const [submitting, setSubmitting] = useState<boolean>(false);
+  const [submitted, setSubmitted] = useState<any>(null);
+  const [errors, setErrors] = useState<Errors>({});
+  const [popup, setPopup] = useState<string>("");
 
   const selectedRoom = useMemo(() => (roomId ? getRoom(roomId) : null), [roomId]);
   const nights = useMemo(() => daysBetween(checkIn, checkOut), [checkIn, checkOut]);
   const nightlyPrice = selectedRoom?.price ?? 0;
   const total = nights * nightlyPrice;
-  const todayISO = formatISO(new Date());
+  const today = _todayISO();
 
-  function validate() {
-    const errs = {};
+  function validate(): Errors {
+    const errs: Errors = {};
     if (!roomId || !selectedRoom) errs.roomId = "Please select a room.";
     if (!checkIn) errs.checkIn = "Check-in is required.";
     if (!checkOut) errs.checkOut = "Check-out is required.";
@@ -50,7 +59,7 @@ export default function BookingForm({ initialRoomId = "" }) {
     return errs;
   }
 
-  async function onSubmit(e) {
+  async function onSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     const errs = validate();
     setErrors(errs);
@@ -59,6 +68,7 @@ export default function BookingForm({ initialRoomId = "" }) {
     setSubmitting(true);
     try {
       await new Promise((res) => setTimeout(res, 400)); // fake latency
+
       const payload = {
         roomId,
         roomNumber: selectedRoom?.number,
@@ -72,10 +82,10 @@ export default function BookingForm({ initialRoomId = "" }) {
         total,
         createdAt: new Date().toISOString(),
       };
+
       const created = addBooking(payload);
       setSubmitted(created);
-    } catch (err) {
-      // show a modal popup; common message is from availability check
+    } catch (err: any) {
       setPopup(err?.message || "Booking failed.");
     } finally {
       setSubmitting(false);
@@ -85,65 +95,61 @@ export default function BookingForm({ initialRoomId = "" }) {
   // Success screen
   if (submitted) {
     return (
-      <div className="rounded-2xl border border-green-200 bg-green-50 p-6 shadow-sm">
+      <div className="rounded-2xl border border-green-200 bg-green-50 p-6 shadow-sm text-black">
         <h2 className="text-xl font-semibold">Reservation Confirmed</h2>
-        <p className="mt-2 text-sm text-gray-700">
-          Thanks, {user?.name}. We’ve recorded your booking.
-        </p>
+        <p className="mt-2 text-sm">Thanks, {user?.name}. We’ve recorded your booking.</p>
 
         <div className="mt-6 grid gap-3 sm:grid-cols-2">
           <div className="rounded-lg border p-4">
-            <div className="text-sm text-gray-500">Room</div>
+            <div className="text-sm">Room</div>
             <div className="font-medium">
               #{submitted.roomNumber} · {submitted.type}
             </div>
           </div>
 
           <div className="rounded-lg border p-4">
-            <div className="text-sm text-gray-500">Dates</div>
+            <div className="text-sm">Dates</div>
             <div className="font-medium">
               {submitted.checkIn} → {submitted.checkOut} ({submitted.nights} nights)
             </div>
           </div>
 
           <div className="rounded-lg border p-4">
-            <div className="text-sm text-gray-500">Guests</div>
+            <div className="text-sm">Guests</div>
             <div className="font-medium">{submitted.guests}</div>
           </div>
 
           <div className="rounded-lg border p-4">
-            <div className="text-sm text-gray-500">Total</div>
+            <div className="text-sm">Total</div>
             <div className="font-semibold">
-              ${submitted.total.toLocaleString()}
-              <span className="ml-1 text-xs font-normal text-gray-500">
-                (${submitted.pricePerNight}/night)
-              </span>
+              ${submitted.total?.toLocaleString?.() ?? submitted.total}
+              <span className="ml-1 text-xs font-normal"> (${submitted.pricePerNight}/night)</span>
             </div>
           </div>
         </div>
 
         {submitted.special && (
           <div className="mt-4 rounded-lg border p-4">
-            <div className="text-sm text-gray-500">Special requests</div>
+            <div className="text-sm">Special requests</div>
             <div className="mt-1 whitespace-pre-wrap">{submitted.special}</div>
           </div>
         )}
 
         <div className="mt-6 flex gap-3">
           <Link
-            href="/rooms"
+            href="/route/rooms"
             className="inline-flex items-center rounded-xl border px-4 py-2 text-sm font-medium hover:bg-white"
           >
             Browse more rooms
           </Link>
           <Link
-            href="/account/bookings"
+            href="/route/account/bookings"
             className="inline-flex items-center rounded-xl border px-4 py-2 text-sm font-medium hover:bg-white"
           >
             View my bookings
           </Link>
           <Link
-            href="/"
+            href="/route"
             className="inline-flex items-center rounded-xl bg-gray-900 px-4 py-2 text-sm font-medium text-white hover:bg-black"
           >
             Back to home
@@ -165,9 +171,7 @@ export default function BookingForm({ initialRoomId = "" }) {
           />
           <div className="relative z-10 w-[90%] max-w-md rounded-xl border border-red-300 bg-white p-5 text-black shadow-xl">
             <h3 className="text-lg font-semibold text-red-700">Cannot complete booking</h3>
-            <p className="mt-2 text-sm text-gray-700">
-              {popup}
-            </p>
+            <p className="mt-2 text-sm text-gray-700">{popup}</p>
             <div className="mt-4 flex justify-end gap-2">
               <button
                 onClick={() => setPopup("")}
@@ -209,7 +213,7 @@ export default function BookingForm({ initialRoomId = "" }) {
             <label className="mb-1 block text-sm font-medium">Check-in</label>
             <input
               type="date"
-              min={todayISO}
+              min={today}
               value={checkIn}
               onChange={(e) => setCheckIn(e.target.value)}
               className="w-full rounded-xl border px-3 py-2 text-sm"
@@ -220,7 +224,7 @@ export default function BookingForm({ initialRoomId = "" }) {
             <label className="mb-1 block text-sm font-medium">Check-out</label>
             <input
               type="date"
-              min={checkIn || todayISO}
+              min={checkIn || today}
               value={checkOut}
               onChange={(e) => setCheckOut(e.target.value)}
               className="w-full rounded-xl border px-3 py-2 text-sm"

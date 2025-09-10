@@ -1,16 +1,18 @@
+// src/app/route/page.tsx
 "use client";
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-// relative import (no "@/...")
-import { login, getCurrentUser } from "../lib/tempCustomers";
+import { login, getCurrentUser } from "@/data/tempCustomers";
+
+type Role = "customer" | "admin";
 
 export default function LandingPage() {
-  const [role, setRole] = useState<"customer" | "admin">("customer");
-  const [email, setEmail] = useState("demo@hotel.test");   // seeded demo
-  const [password, setPassword] = useState("demo123");      // seeded demo
-  const [error, setError] = useState("");
+  const [role, setRole] = useState<Role>("customer");
+  const [email, setEmail] = useState<string>("demo@hotel.test"); // seeded demo
+  const [password, setPassword] = useState<string>("demo123");    // seeded demo
+  const [error, setError] = useState<string>("");
   const router = useRouter();
 
   function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
@@ -22,20 +24,20 @@ export default function LandingPage() {
     }
 
     if (role === "customer") {
-      // If not already logged in, try to log in with provided creds
       const current = getCurrentUser();
       if (!current) {
         try {
+          // tempCustomers handles demo auth + session
           login({ email, password } as any);
-        } catch (err: any) {
-          setError(err?.message || "Login failed.");
-          return; // stop here if login failed
+        } catch (err: unknown) {
+          setError((err as Error)?.message || "Login failed.");
+          return;
         }
       }
-      router.push("/rooms");
+      router.push("/route/rooms");
     } else {
-      // admin path (not implemented yet)
-      router.push("/admin");
+      // Always go to dedicated admin login page
+      router.push("/route/admin");
     }
   }
 
@@ -44,9 +46,7 @@ export default function LandingPage() {
       <h1 className="text-3xl font-bold tracking-tight text-white">
         Hotel Reservation Demo
       </h1>
-      <p className="mt-2 text-white">
-        Please choose how you’d like to enter the system.
-      </p>
+      <p className="mt-2 text-white">Please choose how you’d like to enter the system.</p>
 
       <form
         onSubmit={handleSubmit}
@@ -60,23 +60,22 @@ export default function LandingPage() {
               name="role"
               value="customer"
               checked={role === "customer"}
-              onChange={(e) => setRole(e.target.value as any)}
+              onChange={(e) => setRole(e.target.value as Role)}
             />
             Customer
           </label>
-          <label className="flex items-center gap-2 opacity-70">
+          <label className="flex items-center gap-2">
             <input
               type="radio"
               name="role"
               value="admin"
               checked={role === "admin"}
-              onChange={(e) => setRole(e.target.value as any)}
+              onChange={(e) => setRole(e.target.value as Role)}
             />
-            Admin (not implemented)
+            Admin
           </label>
         </div>
 
-        {/* Show login fields only when Customer is selected */}
         {role === "customer" && (
           <>
             <div className="mt-6 grid gap-4">
@@ -102,9 +101,7 @@ export default function LandingPage() {
               </div>
             </div>
 
-            {error && (
-              <p className="mt-3 text-sm text-red-400">{error}</p>
-            )}
+            {error && <p className="mt-3 text-sm text-red-400">{error}</p>}
 
             <div className="mt-3 text-xs text-gray-400">
               Demo: <code>demo@hotel.test</code> / <code>demo123</code>
@@ -121,7 +118,10 @@ export default function LandingPage() {
 
         {role === "customer" && (
           <div className="mt-4 text-center">
-            <Link href="/register" className="text-sm text-white underline underline-offset-2 hover:opacity-90">
+            <Link
+              href="/route/register"
+              className="text-sm text-white underline underline-offset-2 hover:opacity-90"
+            >
               Need an account? Register
             </Link>
           </div>
