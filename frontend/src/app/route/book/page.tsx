@@ -1,11 +1,17 @@
-"use client";
-
-import { useSearchParams } from "next/navigation";
 import BookingForm from "@/features/bookings/components/BookingForm";
 
-export default function BookPage() {
-  const searchParams = useSearchParams();
-  const roomId: string = searchParams.get("roomId") || "";
+type Search = {
+  roomId?: string | string[];
+};
+
+export default async function BookPage({
+  searchParams,
+}: {
+  searchParams: Promise<Search>;
+}) {
+  const s = await searchParams;
+  const roomId =
+    (Array.isArray(s.roomId) ? s.roomId?.[0] : s.roomId) ?? "";
 
   return (
     <main className="mx-auto max-w-5xl px-4 py-10">
