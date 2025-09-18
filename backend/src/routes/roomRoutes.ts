@@ -40,7 +40,7 @@ router.post("/", async (req: Request, res: Response) => {
   try {
     // Minimal manual validation (you can add a library like zod or joi later)
     const { room_number, type, base_price, amenities, status } = req.body;
-
+    console.log('Hello');
     if (!room_number || !type || base_price == null) {
       return res.status(400).json({
         error: "room_number, type, and base_price are required",

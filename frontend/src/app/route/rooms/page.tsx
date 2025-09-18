@@ -1,12 +1,10 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
+import axios from "axios";
 import RoomsFilters from "@/features/rooms/components/RoomsFilters";
-import { mockRooms } from "@/data/mockRooms";
-import { isRangeAvailable } from "@/data/tempBookings";
 
-// Minimal local type for what we render/use here
 type RoomItem = {
   id: string | number;
   number: number | string;
@@ -20,6 +18,8 @@ export default function RoomsPage() {
   const [checkIn, setCheckIn] = useState<string>("");
   const [checkOut, setCheckOut] = useState<string>("");
   const [onlyAvail, setOnlyAvail] = useState<boolean>(false);
+  const [rooms, setRooms] = useState<RoomItem[]>([]);
+  const [loading, setLoading] = useState<boolean>(false);
 
   function onFiltersChange(
     next: Partial<{ checkIn: string; checkOut: string; onlyAvail: boolean }>
@@ -34,22 +34,40 @@ export default function RoomsPage() {
     if (next.onlyAvail !== undefined) setOnlyAvail(next.onlyAvail);
   }
 
-  const roomsWithAvail: RoomItem[] = useMemo(() => {
-    return (mockRooms as RoomItem[]).map((r) => {
-      const available =
-        checkIn && checkOut ? isRangeAvailable(String(r.id), checkIn, checkOut) : true;
-      return { ...r, available };
-    });
+  // Fetch rooms from backend API
+  useEffect(() => {
+    async function fetchRooms() {
+      const testCheckIn = checkIn || "2025-09-20";
+      const testCheckOut = checkOut || "2025-09-22";
+  
+      setLoading(true);
+      try {
+        console.log('Fetching rooms with', { testCheckIn, testCheckOut });
+        const { data } = await axios.get<RoomItem[]>("http://localhost:3002/api/rooms", {
+          params: { checkIn: testCheckIn, checkOut: testCheckOut },
+        });
+        console.log('Fetched rooms:', data);
+        setRooms(data);
+      } catch (err: any) {
+        console.error("Error fetching rooms:", err.response?.data || err.message);
+        setRooms([]);
+      } finally {
+        setLoading(false);
+      }
+    }
+  
+    fetchRooms();
   }, [checkIn, checkOut]);
-
+  
+  // Filter and sort rooms
   const visibleRooms: RoomItem[] = useMemo(() => {
-    let list = roomsWithAvail;
+    let list = rooms;
     if (onlyAvail && checkIn && checkOut) list = list.filter((r) => r.available);
     return [...list].sort((a, b) => {
       if (a.available !== b.available) return a.available ? -1 : 1;
       return a.price - b.price;
     });
-  }, [roomsWithAvail, onlyAvail, checkIn, checkOut]);
+  }, [rooms, onlyAvail, checkIn, checkOut]);
 
   return (
     <section>
@@ -74,6 +92,9 @@ export default function RoomsPage() {
         </div>
       </div>
 
+      {/* Loading */}
+      {loading && <p className="text-gray-600">Loading rooms...</p>}
+
       {/* List */}
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
         {visibleRooms.map((r) => (
@@ -81,10 +102,10 @@ export default function RoomsPage() {
             <h2 className="text-lg font-medium">
               {r.type.toUpperCase()} • #{r.number}
             </h2>
-            <p className="mt-1 text-sm text-gray-600">{r.amenities.join(" • ")}</p>
+            <p className="mt-1 text-sm text-gray-600">{r.amenities?.join(" • ")}</p>
             <p className="mt-2 font-semibold">{r.price} THB / night</p>
 
-            {checkIn && checkOut && !r.available && (
+            {!r.available && (
               <p className="mt-2 inline-block rounded-md bg-red-50 px-2 py-1 text-xs font-medium text-red-700">
                 Unavailable for selected dates
               </p>
