@@ -4,7 +4,7 @@ const MONGO_URI = process.env.MONGO_URI || "mongodb://127.0.0.1:27017/hotel_mana
 
 async function connectDB() {
   try {
-    await mongoose.connect("mongodb+srv://kelvingao884_db_user:621TIdltAfW3dbKJ@hotelmanagement.qjibbl3.mongodb.net/hotelDB?retryWrites=true&w=majority");
+    await mongoose.connect("mongodb+srv://stafarnhacker_db_user:5vjLmYqD8brV85GZ@hotel-cluster.ksljnm0.mongodb.net/?retryWrites=true&w=majority&appName=hotel-cluster");
     console.log("✅ MongoDB connected");
   } catch (err) {
     console.error("❌ MongoDB connection error:", err);
