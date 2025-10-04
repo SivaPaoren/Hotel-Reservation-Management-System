@@ -1,17 +1,18 @@
+// frontend/src/api/rooms.ts
 import { api } from "./client";
 
-export type RoomType = "single" | "double" | "suite";
-export type RoomStatus = "available" | "unavailable";
+export type RoomType = "single" | "double" | "suite" | string;
+export type RoomStatus = "available" | "unavailable" | string;
 
 export interface Room {
   _id: string;
   room_number: string;
   type: RoomType;
   base_price: number;
-  amenities: string[];
+  amenities?: string[];     // ← optional (Mongo docs may omit)
   status: RoomStatus;
-  createdAt: string;
-  updatedAt: string;
+  createdAt?: string;       // ← optional
+  updatedAt?: string;       // ← optional
 }
 
 export interface CreateRoomInput {
@@ -22,13 +23,7 @@ export interface CreateRoomInput {
   status?: RoomStatus;
 }
 
-export interface UpdateRoomInput {
-  room_number?: string;
-  type?: RoomType;
-  base_price?: number;
-  amenities?: string[];
-  status?: RoomStatus;
-}
+export type UpdateRoomInput = Partial<CreateRoomInput>;
 
 export async function listRooms(params?: { status?: RoomStatus; type?: RoomType }): Promise<Room[]> {
   const { data } = await api.get<Room[]>("/api/rooms", { params });

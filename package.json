@@ -1,8 +1,17 @@
 {
-	"dependencies": {
-		"mongoose": "^8.19.0"
-	},
-	"devDependencies": {
-		"@types/mongoose": "^5.11.97"
-	}
+  "name": "hotel-rms",
+  "private": true,
+  "dependencies": {
+    "mongoose": "^8.19.0"
+  },
+  "devDependencies": {
+    "@types/mongoose": "^5.11.97"
+  },
+  "scripts": {
+    "dev": "pnpm -C backend dev & pnpm -C frontend dev",
+    "dev:backend": "pnpm -C backend dev",
+    "dev:frontend": "pnpm -C frontend dev",
+    "build": "pnpm -C backend build && pnpm -C frontend build",
+    "start": "pnpm -C backend start & pnpm -C frontend start"
+  }
 }

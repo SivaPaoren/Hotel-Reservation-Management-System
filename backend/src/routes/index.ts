@@ -1,19 +1,24 @@
-import { Router } from "express";
-import { z } from "zod";
+import express from "express";
+import roomRoutes from "./roomRoutes.js";
+import bookingRoutes from "./bookingRoutes.js";
+import customerRoutes from "./customerRoutes.js";
+import { checkAdmin } from "../middleware/checkAdmin.js";
 
-export const router = Router();
+const router = express.Router();
 
+// API healthcheck
 router.get("/v1/hello", (_req, res) => {
   res.json({ hello: "world" });
 });
 
-const echoSchema = z.object({ message: z.string().min(1) });
+// API groups
+router.use("/rooms", roomRoutes);
+router.use("/bookings", bookingRoutes);
+router.use("/customers", customerRoutes);
 
-router.post("/v1/echo", (req, res, next) => {
-  try {
-    const data = echoSchema.parse(req.body);
-    res.json({ received: data.message });
-  } catch (err) {
-    next(err);
-  }
+// Admin ping (used for login validation)
+router.get("/admin/ping", checkAdmin, (_req, res) => {
+  res.sendStatus(204);
 });
+
+export default router;
