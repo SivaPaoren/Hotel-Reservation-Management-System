@@ -1,6 +1,7 @@
+// frontend/src/features/rooms/components/RoomsFilters.tsx
 "use client";
 
-import { todayISO } from "../../../lib/dates";
+import { todayISO } from "@/lib/dates";
 
 type RoomsFiltersProps = {
   checkIn: string;
@@ -17,6 +18,8 @@ export default function RoomsFilters({
 }: RoomsFiltersProps) {
   const minCheckIn = todayISO();
   const minCheckOut = checkIn || minCheckIn;
+
+  const canClear = !!(checkIn || checkOut || onlyAvail);
 
   return (
     <div className="w-full rounded-2xl border p-4 md:p-5 shadow-sm">
@@ -56,7 +59,8 @@ export default function RoomsFilters({
         <div className="flex md:justify-end">
           <button
             type="button"
-            className="rounded-xl border px-3 py-2 text-sm hover:bg-gray-50"
+            className="rounded-xl border px-3 py-2 text-sm hover:bg-gray-50 disabled:opacity-50"
+            disabled={!canClear}
             onClick={() => onChange({ checkIn: "", checkOut: "", onlyAvail: false })}
           >
             Clear

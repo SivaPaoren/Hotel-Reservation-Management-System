@@ -1,17 +1,25 @@
+// frontend/src/app/route/book/page.tsx
+"use client";
+
+import { useEffect, useMemo } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import BookingForm from "@/features/bookings/components/BookingForm";
+import { getCurrentCustomer } from "@/lib/session";
 
-type Search = {
-  roomId?: string | string[];
-};
+export default function BookPage() {
+  const router = useRouter();
+  const sp = useSearchParams();
 
-export default async function BookPage({
-  searchParams,
-}: {
-  searchParams: Promise<Search>;
-}) {
-  const s = await searchParams;
-  const roomId =
-    (Array.isArray(s.roomId) ? s.roomId?.[0] : s.roomId) ?? "";
+  // Session guard
+  useEffect(() => {
+    const me = getCurrentCustomer();
+    if (!me) router.replace("/route/login");
+  }, [router]);
+
+  const roomId = useMemo(() => {
+    const v = sp.get("roomId");
+    return v ?? "";
+  }, [sp]);
 
   return (
     <main className="mx-auto max-w-5xl px-4 py-10">

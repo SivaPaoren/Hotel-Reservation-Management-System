@@ -1,27 +1,48 @@
+// frontend/src/app/route/rooms/[id]/page.tsx
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { getRoom } from "@/data/mockRooms";
+import { getRoom, type Room as ApiRoom } from "@/api/rooms";
 
-// Minimal view type for safety (mockRooms is JS)
-type Room = {
+// Avoid stale cache during dev
+export const dynamic = "force-dynamic";
+
+type UIRoom = {
   id: string;
-  number: number | string;
+  number: string | number;
   type: string;
   desc?: string;
   price: number;
   amenities: string[];
 };
 
-// Next 15: params arrives as a Promise in server components
+function mapRoom(r: ApiRoom): UIRoom {
+  return {
+    id: r._id,
+    number: r.room_number ?? "—",
+    type: String(r.type ?? "standard"),
+    desc: (r as any).description ?? undefined,
+    price: Number(r.base_price ?? 0),
+    amenities: Array.isArray(r.amenities) ? r.amenities : [],
+  };
+}
+
+// Next 15: params is a Promise in server components — must await it.
 export default async function RoomDetails({
   params,
 }: {
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-  const room = getRoom(id) as Room | null;
 
-  if (!room) return notFound();
+  let apiRoom: ApiRoom | null = null;
+  try {
+    apiRoom = await getRoom(id);
+  } catch {
+    apiRoom = null;
+  }
+  if (!apiRoom) return notFound();
+
+  const room = mapRoom(apiRoom);
 
   return (
     <main className="mx-auto max-w-5xl px-4 py-10">
@@ -37,7 +58,7 @@ export default async function RoomDetails({
       <div className="mt-6 grid gap-4 sm:grid-cols-3">
         <div className="rounded-xl border p-4">
           <div className="text-sm text-gray-500">Price</div>
-          <div className="text-xl font-semibold">${room.price}/night</div>
+          <div className="text-xl font-semibold">{room.price} THB/night</div>
         </div>
         <div className="rounded-xl border p-4 sm:col-span-2">
           <div className="text-sm text-gray-500">Amenities</div>

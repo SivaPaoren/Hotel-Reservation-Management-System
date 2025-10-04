@@ -1,129 +1,148 @@
+// frontend/src/app/route/account/bookings/page.tsx
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
-import { listBookings, deleteBooking } from "@/data/tempBookings";
+import { useRouter } from "next/navigation";
 
-// Minimal type for what we render here
-type Booking = {
-  id: string | number;
-  email: string;
-  roomNumber: number | string;
-  type: string;
-  checkIn: string;   // YYYY-MM-DD
-  checkOut: string;  // YYYY-MM-DD
-  nights: number;
-  guests: number;
-  total: number;
-  pricePerNight: number;
-};
-
-// --- typed shims for JS exports ---
-type ListBookingsFn = (filter?: { email?: string }) => Booking[];
-const listBookingsTyped = listBookings as unknown as ListBookingsFn;
-
-type DeleteBookingFn = (id: string | number) => void;
-const deleteBookingTyped = deleteBooking as unknown as DeleteBookingFn;
-// -----------------------------------
+import { listBookings, deleteBooking, type Booking } from "@/api/bookings";
+import { getCurrentCustomer, logout } from "@/lib/session";
 
 export default function MyBookingsPage() {
-  const [email, setEmail] = useState<string>("");
-  const [items, setItems] = useState<Booking[]>([]);
+  const router = useRouter();
+  const me = getCurrentCustomer();
 
-  // On first load: get ?email=...
+  const [loading, setLoading] = useState(false);
+  const [err, setErr] = useState("");
+  const [all, setAll] = useState<Booking[]>([]);
+  const didFetch = useRef(false); // ← guard duplicate calls in dev
+
+  // If not logged in, bounce to login
   useEffect(() => {
-    const sp = new URLSearchParams(window.location.search);
-    const pre = sp.get("email") || "";
-    if (pre) setEmail(pre);
-  }, []);
+    if (!me) router.replace("/route/login");
+  }, [me, router]);
 
-  function refresh() {
-    const q = email.trim(); // exact match by design for now
-    const data = q
-      ? listBookingsTyped({ email: q })
-      : listBookingsTyped();
-    setItems(data);
+  // Load bookings once (guarded for Strict Mode)
+  useEffect(() => {
+    if (!me) return;
+    if (didFetch.current) return;
+    didFetch.current = true;
+
+    (async () => {
+      setLoading(true);
+      setErr("");
+      try {
+        const data = await listBookings();
+        setAll(Array.isArray(data) ? data : []);
+      } catch (e: any) {
+        setErr(e?.message || "Failed to load bookings.");
+      } finally {
+        setLoading(false);
+      }
+    })();
+  }, [me]);
+
+  const mine = useMemo(() => {
+    if (!me) return [];
+    return all.filter((b) => {
+      if (typeof b.customer === "string") return b.customer === me._id;
+      return b.customer?._id === me._id;
+    });
+  }, [all, me]);
+
+  async function onDelete(id: string) {
+    if (!confirm("Delete this booking?")) return;
+    try {
+      await deleteBooking(id);
+      setAll((prev) => prev.filter((b) => b._id !== id));
+    } catch (e: any) {
+      alert(e?.message || "Delete failed.");
+    }
   }
 
-  // auto-refresh when email changes
-  useEffect(() => {
-    refresh();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [email]);
+  if (!me) {
+    return <main className="p-6 text-sm text-gray-600">Redirecting to login…</main>;
+  }
 
   return (
-    <main className="mx-auto max-w-5xl px-4 py-10 text-white">
-      <h1 className="text-2xl font-semibold">My Bookings</h1>
-
-      {/* Search toolbar card */}
-      <div className="mt-4 rounded-xl border bg-white p-4 text-black shadow-sm">
-        <div className="flex flex-wrap items-center gap-3">
-          <input
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            placeholder="Filter by email used when booking"
-            className="w-full max-w-md rounded-xl border border-gray-300 bg-white px-3 py-2 text-sm text-black placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-black/10"
-          />
+    <main className="mx-auto max-w-5xl px-4 py-10 text-gray-900">
+      <div className="flex items-center justify-between">
+        <h1 className="text-2xl font-semibold">My Bookings</h1>
+        <div className="text-sm text-gray-700">
+          Signed in as <strong>{me.name}</strong>
           <button
-            onClick={refresh}
-            type="button"
-            className="rounded-xl border border-gray-300 bg-white px-4 py-2 text-sm font-medium hover:bg-gray-50"
+            onClick={() => {
+              logout();
+              router.push("/route/login");
+            }}
+            className="ml-3 rounded-md border px-2 py-1 hover:bg-gray-50"
           >
-            Search
+            Sign out
           </button>
-          <Link
-            href="/route/rooms"
-            className="text-sm font-medium text-blue-700 underline hover:text-blue-800"
-          >
-            Browse rooms
-          </Link>
         </div>
       </div>
 
-      {/* Booking list */}
+      {err && <p className="mt-3 text-sm text-red-600">{err}</p>}
+      {loading && <p className="mt-3 text-sm text-gray-600">Loading…</p>}
+
+      {!loading && !err && mine.length === 0 && (
+        <p className="mt-6 text-sm text-gray-600">
+          You have no bookings yet.{" "}
+          <Link href="/route/rooms" className="underline">
+            Find a room
+          </Link>
+        </p>
+      )}
+
       <div className="mt-6 grid gap-4">
-        {items.length === 0 && <p className="text-sm">No bookings found.</p>}
+        {mine.map((b) => {
+          const checkIn = (b.checkInDate || "").slice(0, 10);
+          const checkOut = (b.checkOutDate || "").slice(0, 10);
+          const roomNumber = b.roomNumber;
 
-        {items.map((b) => (
-          <div
-            key={String(b.id)}
-            className="rounded-xl border bg-white p-4 text-black shadow-sm"
-          >
-            <div className="flex flex-wrap items-center justify-between gap-3">
-              <div>
-                <div className="font-medium">
-                  Booking #{b.id ?? "—"} — Room #{b.roomNumber} · {b.type}
+          return (
+            <div key={b._id} className="rounded-xl border bg-white p-4 text-black shadow-sm">
+              <div className="flex flex-wrap items-center justify-between gap-3">
+                <div>
+                  <div className="font-medium">
+                    Booking #{b._id} — Room #{roomNumber}
+                  </div>
+                  <div className="text-sm">
+                    {checkIn} → {checkOut} · Guests: {b.guests}
+                  </div>
+                  <div className="text-sm">
+                    {b.totalPrice != null ? (
+                      <>
+                        Total: <span className="font-semibold">{b.totalPrice} THB</span>
+                      </>
+                    ) : (
+                      <span className="opacity-70">Price not recorded</span>
+                    )}
+                  </div>
+                  <div className="text-xs mt-1 opacity-70">Status: {b.status}</div>
                 </div>
-                <div className="text-sm">
-                  {b.checkIn} → {b.checkOut} ({b.nights} nights) · Guests: {b.guests}
-                </div>
-                <div className="text-sm">
-                  Total: <span className="font-semibold">${b.total}</span>
-                  <span className="ml-1">(${b.pricePerNight}/night)</span>
+
+                <div className="flex gap-2">
+                  <Link
+                    href={`/route/account/bookings/${encodeURIComponent(b._id)}`}
+                    className="rounded-xl border px-3 py-2 text-sm hover:bg-gray-50"
+                  >
+                    View
+                  </Link>
+                  <button
+                    onClick={() => onDelete(b._id)}
+                    className="rounded-xl border px-3 py-2 text-sm text-red-600 hover:bg-gray-50"
+                    type="button"
+                  >
+                    Delete
+                  </button>
                 </div>
               </div>
 
-              <div className="flex gap-2">
-                <Link
-                  href={`/route/account/bookings/${encodeURIComponent(String(b.id))}`}
-                  className="rounded-xl border px-3 py-2 text-sm hover:bg-gray-50"
-                >
-                  Edit
-                </Link>
-                <button
-                  onClick={() => {
-                    deleteBookingTyped(b.id);
-                    refresh();
-                  }}
-                  className="rounded-xl border px-3 py-2 text-sm text-red-600 hover:bg-gray-50"
-                  type="button"
-                >
-                  Delete
-                </button>
-              </div>
+              <div className="mt-2 text-xs text-gray-500">{b.hotelName}</div>
             </div>
-          </div>
-        ))}
+          );
+        })}
       </div>
     </main>
   );

@@ -1,3 +1,4 @@
+// frontend/src/features/rooms/components/RoomCard.tsx
 "use client";
 
 import Link from "next/link";
@@ -12,14 +13,19 @@ type Props = {
 };
 
 export default function RoomCard({ room, checkIn, checkOut }: Props) {
-  const { id, type, number, amenities, price, available } = room;
+  const { id, type, number, amenities = [], price, available } = room;
+  const idEnc = encodeURIComponent(String(id));
+  const typeLabel = String(type || "").toUpperCase();
+  const numLabel = String(number ?? "—");
 
   return (
     <article className="rounded-lg border p-4">
       <h2 className="text-lg font-medium">
-        {type.toUpperCase()} • #{number}
+        {typeLabel} • #{numLabel}
       </h2>
-      <p className="mt-1 text-sm text-gray-600">{amenities.join(" • ")}</p>
+      <p className="mt-1 text-sm text-gray-600">
+        {amenities.length ? amenities.join(" • ") : "No listed amenities"}
+      </p>
       <p className="mt-2 font-semibold">{price} THB / night</p>
 
       {checkIn && checkOut && available === false && (
@@ -30,7 +36,7 @@ export default function RoomCard({ room, checkIn, checkOut }: Props) {
 
       <div className="mt-3 flex items-center gap-3">
         <Link
-          href={`/rooms/${id}`}
+          href={`/route/rooms/${idEnc}`}
           className="inline-block text-sm underline hover:no-underline"
         >
           View details
@@ -38,7 +44,7 @@ export default function RoomCard({ room, checkIn, checkOut }: Props) {
 
         {checkIn && checkOut && available !== false && (
           <Link
-            href={`/rooms/${id}?checkIn=${encodeURIComponent(
+            href={`/route/rooms/${idEnc}?checkIn=${encodeURIComponent(
               checkIn
             )}&checkOut=${encodeURIComponent(checkOut)}`}
             className="inline-block rounded-md border px-2 py-1 text-sm hover:bg-gray-50"
