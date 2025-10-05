@@ -5,10 +5,7 @@ const EnvSchema = z.object({
   NODE_ENV: z.enum(["development", "test", "production"]).default("development"),
   PORT: z.coerce.number().int().positive().default(3002),
   CORS_ORIGIN: z.string().default("*"),
-  // MONGO_URI: z.string().url(),
+  MONGODB_URI: z.string().min(1, "MONGODB_URI is required"),
 });
-
-
-// console.log("process.env.MONGO_URI:", process.env.MONGO_URI);
 
 export const env = EnvSchema.parse(process.env);
