@@ -4,7 +4,7 @@
 import { useEffect } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { getCurrentCustomer } from "../../lib/session";
+import { getCurrentCustomer } from "../lib/session";
 
 export default function LandingPage() {
   const router = useRouter();
